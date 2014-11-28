@@ -1,0 +1,5 @@
+import(methods)
+import(bigmemory)
+export(bigtabulate, bigsplit, bigtable, bigtsummary)
+useDynLib(bigtabulate)
+
