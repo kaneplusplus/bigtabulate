@@ -10,7 +10,6 @@ LinkingTo: BH, bigmemory
 Suggests: biganalytics
 Description: This package extends the bigmemory package with table- and split-like support for big.matrix objects.  The functions may also be used with regular R matrices for improving speed and memory-efficiency.
 License: LGPL-3
-OS_type: unix
 Copyright: (C) 2013 Michael J. Kane and John W. Emerson
 URL: http://www.bigmemory.org
 LazyLoad: yes
