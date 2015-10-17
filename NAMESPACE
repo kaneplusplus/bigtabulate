@@ -1,5 +1,6 @@
 import(methods)
 import(bigmemory)
+import(biganalytics)
 export(bigtabulate, bigsplit, bigtable, bigtsummary)
 useDynLib(bigtabulate)
 
