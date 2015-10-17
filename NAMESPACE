@@ -1,4 +1,3 @@
-import(Rcpp)
 import(methods)
 import(bigmemory)
 export(bigtabulate, bigsplit, bigtable, bigtsummary)

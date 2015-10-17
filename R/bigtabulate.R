@@ -40,8 +40,8 @@ bigtabulate <- function(x,
       breakm[1,!is.na(breaks)] <- apply(x[,ccols[!is.na(breaks)], drop=FALSE], 2, min, na.rm=TRUE)
       breakm[2,!is.na(breaks)] <- apply(x[,ccols[!is.na(breaks)], drop=FALSE], 2, max, na.rm=TRUE)
     } else {
-      breakm[1,!is.na(breaks)] <- colmin(x, ccols[!is.na(breaks)], na.rm=TRUE)
-      breakm[2,!is.na(breaks)] <- colmax(x, ccols[!is.na(breaks)], na.rm=TRUE)
+      breakm[1,!is.na(breaks)] <- biganalytics::colmin(x, ccols[!is.na(breaks)], na.rm=TRUE)
+      breakm[2,!is.na(breaks)] <- biganalytics::colmax(x, ccols[!is.na(breaks)], na.rm=TRUE)
     }
     breakm[3,] <- breaks
   }
@@ -52,8 +52,8 @@ bigtabulate <- function(x,
           breakm[1,i] <- min(x[,ccols[i]], na.rm=TRUE)  
           breakm[2,i] <- max(x[,ccols[i]], na.rm=TRUE)
         } else {
-          breakm[1,i] <- colmin(x, ccols[i], na.rm=TRUE)
-          breakm[2,i] <- colmax(x, ccols[i], na.rm=TRUE)
+          breakm[1,i] <- biganalytics::colmin(x, ccols[i], na.rm=TRUE)
+          breakm[2,i] <- biganalytics::colmax(x, ccols[i], na.rm=TRUE)
         }
         breakm[3,i] <- breaks[[i]]
       } else {
