@@ -14,9 +14,9 @@ and \code{\link{bigtsummary}}.
 \tabular{ll}{
 Package: \tab bigtabulate\cr
 Type: \tab Package\cr
-Version: \tab 1.1.2\cr
-Date: \tab 2012-11-04\cr
-License: \tab LGPL-3\cr
+Version: \tab 1.1.4\cr
+Date: \tab 2015-10-20\cr
+License: \tab LGPL-3 | Apache License 2.0\cr
 Copyright: \tab (C) 2013 Michael J. Kane and John W. Emerson\cr
 URL: \tab http://www.bigmemory.org\cr
 LazyLoad: \tab yes\cr
