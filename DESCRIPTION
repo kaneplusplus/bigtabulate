@@ -1,7 +1,7 @@
 Package: bigtabulate
 Version: 1.1.4
 Date: 2015-10-20
-Title: 'table', 'tapply', and 'split' Functionality for Matrix and big.matrix Objects
+Title: 'table', 'tapply', and 'split' Functionality for Matrix and 'big.matrix' Objects
 Author: Michael J. Kane <kaneplusplus@gmail.com> and John W. Emerson <jayemerson@gmail.com>
 Maintainer: Michael J. Kane <bigmemoryauthors@gmail.com>
 Contact: Jay and Mike <bigmemoryauthors@gmail.com>
