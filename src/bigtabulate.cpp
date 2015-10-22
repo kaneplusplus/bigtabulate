@@ -11,10 +11,14 @@
 #include "bigmemory/BigMatrix.h"
 #include "bigmemory/MatrixAccessor.hpp"
 #include "bigmemory/isna.hpp"
-#include "bigmemory/util.h"
 
-#include <R.h>
-#include <Rdefines.h>
+// undefine length which Rcpp maps to Rf_length and uses as member function
+#undef length
+#include <Rcpp.h>
+// but redefine it to Rf_length for subsequent use below and in util.h
+#define length Rf_length
+
+#include "bigmemory/util.h"
 
 template<typename T>
 string ttos(T i)
