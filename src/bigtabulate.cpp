@@ -8,13 +8,13 @@
 #include <iostream>
 #include <sstream>
 
+#include <Rcpp.h>
 #include "bigmemory/BigMatrix.h"
 #include "bigmemory/MatrixAccessor.hpp"
 #include "bigmemory/isna.hpp"
-#include "bigmemory/util.h"
 
-#include <R.h>
-#include <Rdefines.h>
+
+#include "bigmemory/util.h"
 
 template<typename T>
 string ttos(T i)
@@ -35,35 +35,35 @@ string ttos<char>(char i)
 SEXP StringVec2RChar( const vector<string> &strVec )
 {
   if (strVec.empty())
-    return NULL_USER_OBJECT;
-  SEXP ret = PROTECT(allocVector(STRSXP, strVec.size()));
+    return R_NilValue;
+  SEXP ret = Rf_protect(Rf_allocVector(STRSXP, strVec.size()));
   vector<string>::size_type i;
   for (i=0; i < strVec.size(); ++i)
   {
-    SET_STRING_ELT(ret, i, mkChar(strVec[i].c_str()));
+    SET_STRING_ELT(ret, i, Rf_mkChar(strVec[i].c_str()));
   }
-  UNPROTECT(1);
+  Rf_unprotect(1);
   return ret;
 }
 
 std::vector<std::string> RDouble2StringVec( SEXP numerics)
 {
-  vector<string> ret( GET_LENGTH(numerics) );
+  vector<string> ret( Rf_length(numerics) );
   vector<string>::size_type i;
   for (i=0; i < ret.size(); ++i)
   {
-    ret[i] = ttos(NUMERIC_DATA(numerics)[i]);
+    ret[i] = ttos(REAL(numerics)[i]);
   }
   return ret;
 }
 
 std::vector<std::string> RInteger2StringVec( SEXP numerics)
 {
-  vector<string> ret( GET_LENGTH(numerics) );
+  vector<string> ret( Rf_length(numerics) );
   vector<string>::size_type i;
   for (i=0; i < ret.size(); ++i)
   {
-    ret[i] = ttos(INTEGER_DATA(numerics)[i]);
+    ret[i] = ttos(INTEGER(numerics)[i]);
   }
   return ret;
 }
@@ -217,23 +217,23 @@ template<typename RType, typename MatrixAccessorType>
 SEXP UniqueGroups( MatrixAccessorType m, SEXP columns, 
   SEXP breakSexp, SEXP useNA )
 {
-  double *pBreaks = NUMERIC_DATA(breakSexp);
+  double *pBreaks = REAL(breakSexp);
   NewVec<RType> RNew;
   VecPtr<RType> RData;
   NAMaker<typename MatrixAccessorType::value_type> make_na;
   typedef std::vector<typename MatrixAccessorType::value_type> Values;
   index_type i,j;
   MatrixAccessor<double> breaks( pBreaks, 3 );
-  SEXP ret = PROTECT(NEW_LIST(GET_LENGTH(columns)));
+  SEXP ret = Rf_protect(Rf_allocVector(VECSXP, Rf_length(columns)));
   int protectCount = 1;
   Values v;
   const index_type breaksIndex = 2;
 
   index_type column;
-  for (i=0; i < GET_LENGTH(columns); ++i)
+  for (i=0; i < Rf_length(columns); ++i)
   {
     SEXP sv;
-    column = static_cast<index_type>(NUMERIC_DATA(columns)[i])-1;
+    column = static_cast<index_type>(REAL(columns)[i])-1;
     if ( !isna(breaks[i][0]) )
     {
       v.resize(static_cast<std::size_t>(breaks[i][breaksIndex]));
@@ -241,7 +241,7 @@ SEXP UniqueGroups( MatrixAccessorType m, SEXP columns,
       {
         v[j] = static_cast<typename MatrixAccessorType::value_type>(j);
       }
-      if (INTEGER_VALUE(useNA) == 1)
+      if (INTEGER(useNA)[0] == 1)
       {
         for (j=0; j < m.nrow(); ++j)
         {
@@ -252,7 +252,7 @@ SEXP UniqueGroups( MatrixAccessorType m, SEXP columns,
           }
         }
       }
-      else if (INTEGER_VALUE(useNA) == 2)
+      else if (INTEGER(useNA)[0] == 2)
       { 
         v.push_back(make_na());
       }
@@ -260,13 +260,13 @@ SEXP UniqueGroups( MatrixAccessorType m, SEXP columns,
     else
     {
       v = get_unique<typename MatrixAccessorType::value_type>( 
-        (m[column]), (m[column] + m.nrow()), INTEGER_VALUE(useNA) );
+        (m[column]), (m[column] + m.nrow()), INTEGER(useNA)[0] );
     }
     sv = RNew(v.size());
     std::copy( v.begin(), v.end(), RData(sv) );
     SET_VECTOR_ELT( ret, i, sv );
   }
-  UNPROTECT(protectCount);
+  Rf_unprotect(protectCount);
   return(ret);
 }
 
@@ -323,13 +323,13 @@ std::string MakeIndexLevelName( MatrixAccessorType &m,
   MappersType &mappers, SEXP columns )
 {
   RType val = static_cast<RType>(
-    (m[static_cast<index_type>(NUMERIC_DATA(columns)[0]-1)][i]));
+    (m[static_cast<index_type>(REAL(columns)[0]-1)][i]));
   string ret( isBreakMapper[0] ? ttos(mappers[i]->to_index(val)) : ttos(val) );
   int j;
-  for (j=1; j < GET_LENGTH(columns); ++j)
+  for (j=1; j < Rf_length(columns); ++j)
   {
     val = static_cast<RType>(
-      (m[static_cast<index_type>(NUMERIC_DATA(columns)[j]-1)][i]));
+      (m[static_cast<index_type>(REAL(columns)[j]-1)][i]));
     ret += ":" + 
       (isBreakMapper[j] ? ttos(mappers[j]->to_index(val)) : ttos(val));
   }
@@ -346,23 +346,23 @@ typedef std::vector<std::string> strings;
 
 strings interact( const strings &s1, SEXP s2 )
 {
-  std::vector<std::string> ret( s1.size() * GET_LENGTH(s2), string("") );
+  std::vector<std::string> ret( s1.size() * Rf_length(s2), string("") );
   size_t i, j, k;
   k=0;
   for (i=0; i < s1.size(); ++i)
   {
-    if (isInteger(s2))
+    if (Rf_isInteger(s2))
     {
-      for (j=0; j < static_cast<size_t>(GET_LENGTH(s2)); ++j)
+      for (j=0; j < static_cast<size_t>(Rf_length(s2)); ++j)
       {
-        ret[k++] = ttos(INTEGER_DATA(s2)[j]) + ":" + s1[i];
+        ret[k++] = ttos(INTEGER(s2)[j]) + ":" + s1[i];
       }
     }
     else
     {
-      for (j=0; j < static_cast<size_t>(GET_LENGTH(s2)); ++j)
+      for (j=0; j < static_cast<size_t>(Rf_length(s2)); ++j)
       {
-        ret[k++] = ttos(NUMERIC_DATA(s2)[j]) + ":" + s1[i];
+        ret[k++] = ttos(REAL(s2)[j]) + ":" + s1[i];
       }
     }
   }
@@ -377,45 +377,45 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
 {
   std::vector<std::string> retNames;
   retNames.push_back(std::string("levels"));
-  SEXP uniqueGroups=PROTECT(UniqueGroups<RType>(m, columns, breakSexp, useNA));
+  SEXP uniqueGroups=Rf_protect(UniqueGroups<RType>(m, columns, breakSexp, useNA));
   int i, j, k;
   strings groupNames;
-  if (isInteger(VECTOR_ELT(uniqueGroups, GET_LENGTH(uniqueGroups)-1)))
+  if (Rf_isInteger(VECTOR_ELT(uniqueGroups, Rf_length(uniqueGroups)-1)))
   {
     groupNames = 
-      RInteger2StringVec(VECTOR_ELT(uniqueGroups, GET_LENGTH(uniqueGroups)-1));
+      RInteger2StringVec(VECTOR_ELT(uniqueGroups, Rf_length(uniqueGroups)-1));
   }
   else
   {
     groupNames = 
-      RDouble2StringVec(VECTOR_ELT(uniqueGroups, GET_LENGTH(uniqueGroups)-1));
+      RDouble2StringVec(VECTOR_ELT(uniqueGroups, Rf_length(uniqueGroups)-1));
   }
-  for (i=GET_LENGTH(uniqueGroups)-2; i >= 0; --i)
+  for (i=Rf_length(uniqueGroups)-2; i >= 0; --i)
   {
     groupNames = interact( groupNames, VECTOR_ELT(uniqueGroups, i) );
   }
   std::map<std::string, int> lmi;
   i=0;
   lmi["levels"] = i++;
-  if ( splitcol != NULL_USER_OBJECT )
+  if ( splitcol != R_NilValue )
   {
     lmi["split"] = i++;
     retNames.push_back(std::string("split"));
   }
-  if ( LOGICAL_VALUE(returnTable) )
+  if ( LOGICAL(returnTable)[0] )
   {
     lmi["table"] = i++;
     retNames.push_back(std::string("table"));
   }
-  if ( LOGICAL_VALUE(returnSummary) )
+  if ( LOGICAL(returnSummary)[0] )
   {
     lmi["summary"] = i++;
     retNames.push_back(std::string("summary"));
   }
-  SEXP ret = PROTECT(NEW_LIST(i));
-  setAttrib( ret, R_NamesSymbol, StringVec2RChar( retNames ) );
+  SEXP ret = Rf_protect(Rf_allocVector(VECSXP, i));
+  Rf_setAttrib( ret, R_NamesSymbol, StringVec2RChar( retNames ) );
   SET_VECTOR_ELT( ret, lmi[string("levels")], uniqueGroups );
-  MatrixAccessor<double> breaks( NUMERIC_DATA(breakSexp), 3 );
+  MatrixAccessor<double> breaks( REAL(breakSexp), 3 );
   typedef boost::shared_ptr<Mapper<RType> > MapperPtr;
   typedef std::vector<MapperPtr> Mappers;
   VecPtr<RType> RData;
@@ -426,25 +426,25 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
   std::vector<int> accMult;
   // Create the data structures that map values to indices for each of the
   // columns.
-  std::vector<bool> isBreakMapper(GET_LENGTH(uniqueGroups), false);
-  accMult.resize(GET_LENGTH(uniqueGroups));
+  std::vector<bool> isBreakMapper(Rf_length(uniqueGroups), false);
+  accMult.resize(Rf_length(uniqueGroups));
   int lastVecLen=0;
-  for (i=0; i < GET_LENGTH(uniqueGroups); ++i)
+  for (i=0; i < Rf_length(uniqueGroups); ++i)
   {
     SEXP vec = VECTOR_ELT(uniqueGroups, i);
-    int vecLen = GET_LENGTH(vec);
+    int vecLen = Rf_length(vec);
     if (!isna(breaks[i][0]))
     {
       mappers.push_back( MapperPtr(
         new BreakMapper<RType>( breaks[i][0], breaks[i][1], 
-          breaks[i][2], INTEGER_VALUE(useNA) > 0 ) ) );
+          breaks[i][2], INTEGER(useNA)[0] > 0 ) ) );
       isBreakMapper[i]=true;
     }
     else
     {
       mappers.push_back( MapperPtr( 
         new IndexMapper<RType>( RData(vec), 
-          RData(vec) + vecLen, INTEGER_VALUE(useNA) > 0 ) ) );
+          RData(vec) + vecLen, INTEGER(useNA)[0] > 0 ) ) );
     }
     totalListSize = (totalListSize == 0 ? vecLen : totalListSize*vecLen);
     if (i==0)
@@ -475,26 +475,26 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
   typedef std::vector<index_type> ProcessColumns;
   ProcessColumns procCols;
 
-  if ( splitcol != NULL_USER_OBJECT || LOGICAL_VALUE(returnSummary) )
+  if ( splitcol != R_NilValue || LOGICAL(returnSummary)[0] )
   {
-    if ( isna(NUMERIC_VALUE(splitcol)) || LOGICAL_VALUE(returnSummary) )
+    if ( isna(REAL(splitcol)[0]) || LOGICAL(returnSummary)[0] )
     {
       tis.resize(totalListSize);
     }
     else
       tiv.resize(totalListSize);
   }
-  if ( LOGICAL_VALUE(returnTable) || LOGICAL_VALUE(returnSummary) )
+  if ( LOGICAL(returnTable)[0] || LOGICAL(returnSummary)[0] )
   {
     tvs.resize(totalListSize);
     std::fill( tvs.begin(), tvs.end(), 0 );
   }
-  if ( LOGICAL_VALUE(returnSummary) )
+  if ( LOGICAL(returnSummary)[0] )
   {
-    procCols.resize(GET_LENGTH(processColumns));
+    procCols.resize(Rf_length(processColumns));
     for (k=0; k < static_cast<index_type>(procCols.size()); ++k)
     {
-      procCols[k] = static_cast<index_type>(NUMERIC_DATA(processColumns)[k])-1;
+      procCols[k] = static_cast<index_type>(REAL(processColumns)[k])-1;
     }
     ts.resize( procCols.size() );
     // min, max, sum, sum^2
@@ -506,10 +506,10 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
   {
     int tableIndex=0;
     int mapperVal;
-    for (j=1; j < GET_LENGTH(columns); ++j)
+    for (j=1; j < Rf_length(columns); ++j)
     {
       mapperVal = mappers[j]->to_index( static_cast<RType>(
-          (m[static_cast<index_type>(NUMERIC_DATA(columns)[j]-1)][i])) );
+          (m[static_cast<index_type>(REAL(columns)[j]-1)][i])) );
       if (mapperVal == -1)
       {
         tableIndex = -1;
@@ -518,29 +518,29 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
       tableIndex += accMult[j] * mapperVal;
     }
     mapperVal = mappers[0]->to_index( static_cast<RType>(
-        (m[static_cast<index_type>(NUMERIC_DATA(columns)[0]-1)][i])) );
+        (m[static_cast<index_type>(REAL(columns)[0]-1)][i])) );
     if (tableIndex == -1 || mapperVal == -1)
     {
       continue;
     }
     tableIndex += mapperVal;
-    if ( splitcol != NULL_USER_OBJECT || LOGICAL_VALUE(returnSummary) )
+    if ( splitcol != R_NilValue || LOGICAL(returnSummary)[0] )
     {
-      if ( isna(NUMERIC_VALUE(splitcol)) || LOGICAL_VALUE(returnSummary) )
+      if ( isna(REAL(splitcol)[0]) || LOGICAL(returnSummary)[0] )
       {
         tis[tableIndex].push_back(i+1);
       }
       else
       {
         tiv[tableIndex].push_back( 
-          m[static_cast<index_type>(NUMERIC_VALUE(splitcol))-1][i] );
+          m[static_cast<index_type>(REAL(splitcol)[0])-1][i] );
       }
     }
-    if ( LOGICAL_VALUE(returnTable) || LOGICAL_VALUE(returnSummary) )
+    if ( LOGICAL(returnTable)[0] || LOGICAL(returnSummary)[0] )
     {
       ++tvs[tableIndex];
     }
-    if ( LOGICAL_VALUE(returnSummary) )
+    if ( LOGICAL(returnSummary)[0] )
     {
       for (k=0; k < static_cast<index_type>(ts.size()); ++k)
       {
@@ -580,22 +580,22 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
       }
     }
   }
-  if ( splitcol != NULL_USER_OBJECT )
+  if ( splitcol != R_NilValue )
   { 
     SEXP mapRet;
-    if ( INTEGER_VALUE(splitlist) == 1)
+    if ( INTEGER(splitlist)[0] == 1)
     {
       SEXP vec;
       // Copy to a list of vectors that R can read.
-      mapRet = PROTECT(NEW_LIST( groupNames.size() ));
+      mapRet = Rf_protect(Rf_allocVector(VECSXP, groupNames.size() ));
       ++protectCount;
-      if ( isna(NUMERIC_VALUE(splitcol)) )
+      if ( isna(REAL(splitcol)[0]) )
       {
         for (i=0; i < static_cast<index_type>(tis.size()); ++i)
         {
           Indices &ind = tis[i];
-          vec = NEW_NUMERIC(ind.size());
-          std::copy( ind.begin(), ind.end(), NUMERIC_DATA(vec) );
+          vec = Rf_allocVector(REALSXP,ind.size());
+          std::copy( ind.begin(), ind.end(), REAL(vec) );
           SET_VECTOR_ELT( mapRet, i, vec );
         }
       }
@@ -609,11 +609,11 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
           SET_VECTOR_ELT( mapRet, i, vec );
         }
       }
-      SET_NAMES(mapRet, StringVec2RChar(groupNames));
+      Rf_setAttrib(mapRet, R_NamesSymbol, StringVec2RChar(groupNames));
       groupNames.clear();
       groupNames.reserve(0);
     }
-    else if ( INTEGER_VALUE(splitlist) == 2)
+    else if ( INTEGER(splitlist)[0] == 2)
     {
       std::size_t zeroCount;
       if (tis.size() > 0)
@@ -629,22 +629,22 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
 
       SEXP vec;
       // Copy to a list of vectors that R can read.
-      mapRet = PROTECT(NEW_LIST( groupNames.size() - zeroCount ));
+      mapRet = Rf_protect(Rf_allocVector(VECSXP,groupNames.size()-zeroCount ));
       ++protectCount;
-      SEXP mapNames = PROTECT(allocVector(STRSXP, GET_LENGTH(mapRet)));
+      SEXP mapNames = Rf_protect(Rf_allocVector(STRSXP, Rf_length(mapRet)));
       ++protectCount;
       j=0;
-      if ( isna(NUMERIC_VALUE(splitcol)) )
+      if ( isna(REAL(splitcol)[0]) )
       {
         for (i=0; i < static_cast<index_type>(tis.size()); ++i)
         {
           if (tis[i].size() > 0)
           {
             Indices &ind = tis[i];
-            vec = NEW_NUMERIC(tis[i].size());
-            std::copy( ind.begin(), ind.end(), NUMERIC_DATA(vec) );
+            vec = Rf_allocVector(REALSXP,tis[i].size());
+            std::copy( ind.begin(), ind.end(), REAL(vec) );
             SET_VECTOR_ELT( mapRet, j, vec );
-            SET_STRING_ELT( mapNames, j, mkChar(groupNames[i].c_str()) );
+            SET_STRING_ELT( mapNames, j, Rf_mkChar(groupNames[i].c_str()) );
             ++j;
           }
         }
@@ -659,45 +659,44 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
             vec = RNew(tiv[i].size());
             std::copy( ind.begin(), ind.end(), RData(vec) );
             SET_VECTOR_ELT( mapRet, j, vec );
-            SET_STRING_ELT( mapNames, j, mkChar(groupNames[i].c_str()) );
+            SET_STRING_ELT( mapNames, j, Rf_mkChar(groupNames[i].c_str()) );
             ++j;
           }
         }
       }
-//      SET_NAMES(mapRet, StringVec2RChar(mapperNames));
-      SET_NAMES(mapRet, mapNames);
+      Rf_setAttrib(mapRet, R_NamesSymbol, mapNames);
       groupNames.clear();
       groupNames.reserve(0);
     }
     else // INTEGER_VALUE(splitlist) == 0 
     {
-      SEXP mn = PROTECT(allocVector(STRSXP, m.nrow()));
+      SEXP mn = Rf_protect(Rf_allocVector(STRSXP, m.nrow()));
       ++protectCount;
-      mapRet = NEW_NUMERIC(m.nrow());
-      double *pmr = NUMERIC_DATA(mapRet);
+      mapRet = Rf_allocVector(REALSXP,m.nrow());
+      double *pmr = REAL(mapRet);
       for (i=0; i < static_cast<index_type>(tis.size()); ++i)
       {
         Indices &inds = tis[i];
         for (j=0; j < static_cast<index_type>(inds.size()); ++j)
         {
           SET_STRING_ELT(mn, static_cast<int>(inds[j]-1), 
-            mkChar(groupNames[i].c_str()));
+            Rf_mkChar(groupNames[i].c_str()));
           pmr[static_cast<index_type>(inds[j])-1] = i+1;
         }
       }
       groupNames.clear();
       groupNames.reserve(0);
-      SET_NAMES(mapRet, mn);
+      Rf_setAttrib(mapRet, R_NamesSymbol, mn);
     }
     SET_VECTOR_ELT(ret, lmi[string("split")], mapRet);
   }
-  if ( LOGICAL_VALUE(returnTable) )
+  if ( LOGICAL(returnTable)[0] )
   {
-    SEXP tableRet = NEW_INTEGER(tvs.size());
-    std::copy( tvs.begin(), tvs.end(), INTEGER_DATA(tableRet) );
+    SEXP tableRet = Rf_allocVector(INTSXP,tvs.size());
+    std::copy( tvs.begin(), tvs.end(), INTEGER(tableRet) );
     SET_VECTOR_ELT(ret, lmi[string("table")], tableRet);
   } 
-  if ( LOGICAL_VALUE(returnSummary) )
+  if ( LOGICAL(returnSummary)[0] )
   {
     // If we change the data structures holding the summaries, can
     // we get better performance.
@@ -707,23 +706,23 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
     colnames.push_back(string("mean"));
     colnames.push_back(string("sd"));
     colnames.push_back(string("NAs"));
-    SEXP summaryRet = PROTECT(NEW_LIST(ts[0].size()));
+    SEXP summaryRet = Rf_protect(Rf_allocVector(VECSXP, ts[0].size()));
     ++protectCount;
-    for (i=0; i < GET_LENGTH(summaryRet); ++i)
+    for (i=0; i < Rf_length(summaryRet); ++i)
     {
-      SEXP dimnames = NEW_LIST(2);
+      SEXP dimnames = Rf_allocVector(VECSXP, 2);
       SET_VECTOR_ELT(dimnames, 0, R_NilValue );
       SET_VECTOR_ELT(dimnames, 1, StringVec2RChar(colnames) );
       
-      SEXP retMat = allocMatrix(REALSXP, ts.size(), 5);
-      setAttrib(retMat, R_DimNamesSymbol, dimnames);
-      MatrixAccessor<double> rm( NUMERIC_DATA(retMat), ts.size() );
+      SEXP retMat = Rf_allocMatrix(REALSXP, ts.size(), 5);
+      Rf_setAttrib(retMat, R_DimNamesSymbol, dimnames);
+      MatrixAccessor<double> rm( REAL(retMat), ts.size() );
       LDOUBLE temp;
       for (j=0; j < static_cast<index_type>(ts.size()); ++j)
       {
         if (tvs[i] > 0)
         {
-          if (LOGICAL_VALUE(summaryNARM) || ts[j][i][5] == 0)
+          if (LOGICAL(summaryNARM)[0] || ts[j][i][5] == 0)
           {
             rm[0][j] = ts[j][i][0];
             rm[1][j] = ts[j][i][1];
@@ -756,7 +755,7 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
     }
     SET_VECTOR_ELT(ret, lmi[string("summary")], summaryRet);
   }
-  UNPROTECT( protectCount );
+  Rf_unprotect( protectCount );
   return ret;
 }
 
@@ -767,7 +766,7 @@ SEXP RNumericTAPPLY( SEXP numericMatrix , SEXP columns, SEXP breaks,
   SEXP returnTable, SEXP useNA, SEXP returnSummary, 
   SEXP processColumns, SEXP summaryNARM, SEXP splitcol, SEXP splitlist )
 {
-  return TAPPLY<double>( MatrixAccessor<double>( NUMERIC_DATA(numericMatrix),
+  return TAPPLY<double>( MatrixAccessor<double>( REAL(numericMatrix),
     static_cast<index_type>(Rf_nrows(numericMatrix)) ), 
     columns, breaks, returnTable, useNA, 
     returnSummary, processColumns, summaryNARM, splitcol, splitlist );
@@ -777,7 +776,7 @@ SEXP RIntTAPPLY( SEXP numericMatrix , SEXP columns, SEXP breaks,
   SEXP returnTable, SEXP useNA, SEXP returnSummary, 
   SEXP processColumns, SEXP summaryNARM, SEXP splitcol, SEXP splitlist )
 {
-  return TAPPLY<int>( MatrixAccessor<int>( INTEGER_DATA(numericMatrix),
+  return TAPPLY<int>( MatrixAccessor<int>( INTEGER(numericMatrix),
     static_cast<index_type>(Rf_nrows(numericMatrix)) ), 
     columns, breaks, returnTable, useNA, 
     returnSummary, processColumns, summaryNARM, splitcol, splitlist );
