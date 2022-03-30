@@ -337,7 +337,7 @@ std::string MakeIndexLevelName( MatrixAccessorType &m,
 }
 
 template<typename T>
-struct zero_size : public std::unary_function<T, bool>
+struct zero_size 
 {
   bool operator()( const T &vec ) const {return vec.size() == 0;}
 };
