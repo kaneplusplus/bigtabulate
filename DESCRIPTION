@@ -1,6 +1,5 @@
 Package: bigtabulate
-Version: 1.1.7
-Date: 2016-02-17
+Version: 1.1.8
 Title: Table, Apply, and Split Functionality for Matrix and 'big.matrix' Objects
 Author: Michael J. Kane <kaneplusplus@gmail.com> and John W. Emerson
     <jayemerson@gmail.com>
@@ -18,4 +17,4 @@ Copyright: (C) 2015 Michael J. Kane and John W. Emerson
 URL: http://www.bigmemory.org
 LazyLoad: yes
 Biarch: yes
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.2

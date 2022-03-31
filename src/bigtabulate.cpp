@@ -680,7 +680,8 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
         for (j=0; j < static_cast<index_type>(inds.size()); ++j)
         {
           SET_STRING_ELT(mn, static_cast<int>(inds[j]-1), 
-            Rf_mkChar(groupNames[i].c_str()));
+            Rf_protect(Rf_mkChar(groupNames[i].c_str())));
+          ++protectCount;
           pmr[static_cast<index_type>(inds[j])-1] = i+1;
         }
       }
