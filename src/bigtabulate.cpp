@@ -672,7 +672,8 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
     {
       SEXP mn = Rf_protect(Rf_allocVector(STRSXP, m.nrow()));
       ++protectCount;
-      mapRet = Rf_allocVector(REALSXP,m.nrow());
+      mapRet = Rf_protect(Rf_allocVector(REALSXP,m.nrow()));
+      ++protectCount;
       double *pmr = REAL(mapRet);
       for (i=0; i < static_cast<index_type>(tis.size()); ++i)
       {
@@ -711,7 +712,8 @@ SEXP TAPPLY( MatrixAccessorType m, SEXP columns, SEXP breakSexp,
     ++protectCount;
     for (i=0; i < Rf_length(summaryRet); ++i)
     {
-      SEXP dimnames = Rf_allocVector(VECSXP, 2);
+      SEXP dimnames = Rf_protect(Rf_allocVector(VECSXP, 2));
+      ++protectCount;
       SET_VECTOR_ELT(dimnames, 0, R_NilValue );
       SET_VECTOR_ELT(dimnames, 1, StringVec2RChar(colnames) );
       
